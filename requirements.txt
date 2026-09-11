@@ -1,0 +1,2 @@
+# Phase 0 dependencies. More get added in later phases (numpy, numba, torch, ...).
+python-chess>=1.999
