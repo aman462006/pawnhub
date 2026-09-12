@@ -1,5 +1,9 @@
 # PawnHub — a chess engine built from scratch
 
+**▶ Play it live: [pawnhub.onrender.com](https://pawnhub.onrender.com)**
+_(hosted on Render's free tier — it sleeps when idle, so the first load after a while can take a few
+seconds to wake up)_
+
 A complete chess engine written from the ground up in **C++**, with a **neural-network evaluation
 (NNUE)** trained in **Python**, and a polished **React web app** to play against it. It speaks the
 **UCI** protocol, so it runs in any chess GUI or bot host, and it plays at roughly **~2300 Lichess
