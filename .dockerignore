@@ -1,0 +1,14 @@
+# Keep the Docker build context small and fast.
+.git
+.venv
+venv
+data
+lichess-bot
+**/node_modules
+web/dist
+engine/build
+**/__pycache__
+*.pt
+*.log
+.vscode
+.idea

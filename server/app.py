@@ -21,7 +21,10 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ENGINE_PATH = os.path.join(ROOT, "engine", "build", "engine.exe")
+# The engine binary is "engine.exe" on Windows and "engine" on Linux (e.g. in the Docker
+# deploy image). Allow an explicit override via the ENGINE_PATH environment variable.
+ENGINE_NAME = "engine.exe" if os.name == "nt" else "engine"
+ENGINE_PATH = os.environ.get("ENGINE_PATH") or os.path.join(ROOT, "engine", "build", ENGINE_NAME)
 WEB_DIST = os.path.join(ROOT, "web", "dist")
 
 # The four bots: same engine, increasing strength. "random" = chance of playing a random legal

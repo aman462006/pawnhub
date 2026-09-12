@@ -1,0 +1,13 @@
+# Render Blueprint — one-click deploy of the PawnHub web app (API + UI) from the Dockerfile.
+# In the Render dashboard: New > Blueprint, point it at this repo, and it reads this file.
+services:
+  - type: web
+    name: pawnhub
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/bots
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 8000
