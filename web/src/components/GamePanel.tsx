@@ -1,4 +1,4 @@
-import { Crown } from 'lucide-react'
+import { Crown, Search } from 'lucide-react'
 import type { Bot } from '../lib/bots'
 import type { GameStatus, Side } from '../hooks/useChessGame'
 import { GameControls } from './GameControls'
@@ -70,6 +70,15 @@ export function GamePanel({
   onUndo,
   onResign,
   canUndo,
+  activePly,
+  atStart,
+  atLive,
+  onGotoPly,
+  onFirst,
+  onPrev,
+  onNext,
+  onLive,
+  onAnalyze,
 }: {
   bot: Bot
   humanSide: Side
@@ -81,6 +90,15 @@ export function GamePanel({
   onUndo: () => void
   onResign: () => void
   canUndo: boolean
+  activePly: number
+  atStart: boolean
+  atLive: boolean
+  onGotoPly: (ply: number) => void
+  onFirst: () => void
+  onPrev: () => void
+  onNext: () => void
+  onLive: () => void
+  onAnalyze: () => void
 }) {
   return (
     <aside className="panel">
@@ -103,7 +121,17 @@ export function GamePanel({
         <StatusLine status={status} thinking={thinking} botName={bot.name} humanSide={humanSide} />
       </div>
 
-      <MoveHistory moves={moves} />
+      <MoveHistory
+        moves={moves}
+        activePly={activePly}
+        atStart={atStart}
+        atLive={atLive}
+        onGotoPly={onGotoPly}
+        onFirst={onFirst}
+        onPrev={onPrev}
+        onNext={onNext}
+        onLive={onLive}
+      />
 
       <div className="panel-sec">
         <GameControls
@@ -114,6 +142,10 @@ export function GamePanel({
           canUndo={canUndo}
           canResign={!status.over && !thinking}
         />
+        {/* Send the position currently on the board (live or a reviewed one) to the Analyse view. */}
+        <button className="btn btn-block" onClick={onAnalyze} style={{ marginTop: 8 }}>
+          <Search strokeWidth={1.9} /> Analyse position
+        </button>
       </div>
     </aside>
   )

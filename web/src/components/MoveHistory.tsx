@@ -1,16 +1,37 @@
 import { useEffect, useRef } from 'react'
+import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight } from 'lucide-react'
 
-export function MoveHistory({ moves }: { moves: string[] }) {
+export function MoveHistory({
+  moves,
+  activePly,
+  atStart,
+  atLive,
+  onGotoPly,
+  onFirst,
+  onPrev,
+  onNext,
+  onLive,
+}: {
+  moves: string[]
+  activePly: number
+  atStart: boolean
+  atLive: boolean
+  onGotoPly: (ply: number) => void
+  onFirst: () => void
+  onPrev: () => void
+  onNext: () => void
+  onLive: () => void
+}) {
   const scroller = useRef<HTMLDivElement>(null)
+  // Keep the highlighted move in view as you play or step through the game.
   useEffect(() => {
-    if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight
-  }, [moves.length])
+    scroller.current?.querySelector('.ply.current')?.scrollIntoView({ block: 'nearest' })
+  }, [activePly, moves.length])
 
   const pairs: { n: number; white?: string; black?: string; wi: number; bi: number }[] = []
   for (let i = 0; i < moves.length; i += 2) {
     pairs.push({ n: i / 2 + 1, white: moves[i], black: moves[i + 1], wi: i, bi: i + 1 })
   }
-  const current = moves.length - 1
 
   return (
     <div className="panel-sec">
@@ -28,14 +49,43 @@ export function MoveHistory({ moves }: { moves: string[] }) {
           {pairs.map((p) => (
             <div className="move-row" key={p.n}>
               <span className="n">{p.n}.</span>
-              <span className={'ply filled' + (current === p.wi ? ' current' : '')}>{p.white}</span>
-              <span className={'ply' + (p.black ? ' filled' : '') + (current === p.bi ? ' current' : '')}>
-                {p.black ?? ''}
-              </span>
+              <button
+                className={'ply filled' + (activePly === p.wi ? ' current' : '')}
+                onClick={() => onGotoPly(p.wi)}
+              >
+                {p.white}
+              </button>
+              {p.black ? (
+                <button
+                  className={'ply filled' + (activePly === p.bi ? ' current' : '')}
+                  onClick={() => onGotoPly(p.bi)}
+                >
+                  {p.black}
+                </button>
+              ) : (
+                <span className="ply" />
+              )}
             </div>
           ))}
         </div>
       )}
+
+      {/* Review controls: jump to start, step back/forward, jump to the live position. These only
+          change what the board *shows* — they never undo a move. */}
+      <div className="move-nav">
+        <button className="nav-btn" onClick={onFirst} disabled={atStart} title="Go to start" aria-label="Go to start">
+          <ChevronFirst strokeWidth={2} />
+        </button>
+        <button className="nav-btn" onClick={onPrev} disabled={atStart} title="Previous move" aria-label="Previous move">
+          <ChevronLeft strokeWidth={2} />
+        </button>
+        <button className="nav-btn" onClick={onNext} disabled={atLive} title="Next move" aria-label="Next move">
+          <ChevronRight strokeWidth={2} />
+        </button>
+        <button className="nav-btn" onClick={onLive} disabled={atLive} title="Go to current position" aria-label="Go to current position">
+          <ChevronLast strokeWidth={2} />
+        </button>
+      </div>
     </div>
   )
 }

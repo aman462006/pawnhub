@@ -34,9 +34,18 @@ export function useChessGame(botId: BotId, humanSide: Side) {
   const [thinking, setThinking] = useState(false)
   const [resigned, setResigned] = useState(false)
 
+  // Review navigation: which ply's position is shown on the board. `null` means "live" — follow
+  // the real game. Any number 0..N is a *read-only* snapshot (N = number of plies played); it never
+  // mutates the actual game, so this is purely a viewer and is completely separate from undo.
+  const [viewPos, setViewPos] = useState<number | null>(null)
+
   const gen = useRef(0) // bumped on new-game / undo to invalidate an in-flight bot move
   const inFlight = useRef(false)
-  const sync = useCallback(() => setFen(chess.fen()), [chess])
+  // Any real change to the game (a move, undo, new game) snaps the board back to the live position.
+  const sync = useCallback(() => {
+    setViewPos(null)
+    setFen(chess.fen())
+  }, [chess])
 
   const status = useMemo<GameStatus>(() => {
     const turn = sideToMove(chess)
@@ -141,8 +150,66 @@ export function useChessGame(botId: BotId, humanSide: Side) {
 
   const historySan = useMemo(() => chess.history(), [fen]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ---- Review navigation ---------------------------------------------------------------------
+  // The verbose move list and a snapshot FEN after every ply, both recomputed only when a real
+  // move lands (fen changes). Index 0 is the starting position; index k is after k plies.
+  const verbose = useMemo(() => chess.history({ verbose: true }), [fen]) // eslint-disable-line react-hooks/exhaustive-deps
+  const fenHistory = useMemo(() => {
+    const replay = new Chess()
+    const fens = [replay.fen()]
+    for (const san of historySan) {
+      replay.move(san)
+      fens.push(replay.fen())
+    }
+    return fens
+  }, [historySan])
+
+  const plies = verbose.length
+  const reviewing = viewPos !== null
+  const atStart = (viewPos ?? plies) === 0
+  const atLive = viewPos === null
+
+  // What the board should actually render — live position, or the reviewed snapshot.
+  const boardFen = viewPos === null ? fen : fenHistory[viewPos]
+  const boardLastMove: [Square, Square] | null =
+    viewPos === null
+      ? lastMove
+      : viewPos > 0
+        ? [verbose[viewPos - 1].from as Square, verbose[viewPos - 1].to as Square]
+        : null
+  const boardCheckSquare = useMemo<Square | null>(() => {
+    if (viewPos === null) return status.checkSquare
+    const c = new Chess(fenHistory[viewPos])
+    return c.inCheck() ? kingSquare(c, c.turn()) : null
+  }, [viewPos, fenHistory, status.checkSquare])
+
+  // Which ply (0-based index into historySan) is highlighted in the move list.
+  const activePly = viewPos === null ? plies - 1 : viewPos - 1
+
+  const goStart = useCallback(() => setViewPos(plies === 0 ? null : 0), [plies])
+  const goPrev = useCallback(
+    () => setViewPos((p) => Math.max(0, (p ?? plies) - 1)),
+    [plies],
+  )
+  const goNext = useCallback(
+    () => setViewPos((p) => {
+      const next = (p ?? plies) + 1
+      return next >= plies ? null : next
+    }),
+    [plies],
+  )
+  const goLive = useCallback(() => setViewPos(null), [])
+  // Clicking a move in the list jumps to the position *after* that move.
+  const gotoPly = useCallback(
+    (ply: number) => setViewPos(ply + 1 >= plies ? null : ply + 1),
+    [plies],
+  )
+
   return {
     chess, fen, lastMove, thinking, status, historySan,
     legalTargets, userMove, newGame, resign, undo,
+    // review
+    reviewing, atStart, atLive, boardFen, boardLastMove, boardCheckSquare, activePly,
+    goStart, goPrev, goNext, goLive, gotoPly,
   }
 }

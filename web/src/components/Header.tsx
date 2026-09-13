@@ -1,16 +1,18 @@
 import { Crown } from 'lucide-react'
 
-export type View = 'home' | 'game'
+export type View = 'home' | 'game' | 'analyze'
 export type NavTarget = 'play' | 'bots' | 'about'
 
 export function Header({
   view,
   onHome,
   onNavigate,
+  onAnalyze,
 }: {
   view: View
   onHome: () => void
   onNavigate: (target: NavTarget) => void
+  onAnalyze: () => void
 }) {
   const nav = (target: NavTarget) => (e: React.MouseEvent) => {
     e.preventDefault()
@@ -44,6 +46,16 @@ export function Header({
           </a>
           <a href="#about" className="nav-extra" onClick={nav('about')}>
             About
+          </a>
+          <a
+            href="#analyze"
+            className={'nav-extra' + (view === 'analyze' ? ' active' : '')}
+            onClick={(e) => {
+              e.preventDefault()
+              onAnalyze()
+            }}
+          >
+            Analyse
           </a>
         </nav>
       </div>

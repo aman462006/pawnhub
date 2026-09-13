@@ -7,6 +7,7 @@ so they feel like genuine beginners rather than a perfect engine playing fast).
 Endpoints:
   GET  /api/bots       -> list of bots (id, name, tier)
   POST /api/bot-move   -> { fen, bot } -> { move (uci), san }
+  POST /api/analyze    -> { fen, bot } -> { fen, turn, best, line } (best move + continuation)
 """
 import os
 import random
@@ -36,8 +37,19 @@ BOTS = {
     "aman":       {"name": "Aman",       "tier": "Strongest",    "movetime": 1.0,     "random": 0.0},
 }
 
+# Our engine reports mate as a huge score (MATE = 1_000_000 in search.cpp) rather than a UCI
+# "score mate" token, so we translate large centipawn values back into a mate distance here.
+MATE = 1_000_000
+MATE_THRESHOLD = MATE - 1_000
+
 _engine: chess.engine.SimpleEngine | None = None
 _lock = threading.Lock()
+
+
+def _limit_for(cfg: dict) -> "chess.engine.Limit":
+    """The search budget that defines a bot's strength (fixed time for Aman, else fixed depth)."""
+    return (chess.engine.Limit(time=cfg["movetime"]) if "movetime" in cfg
+            else chess.engine.Limit(depth=cfg["depth"]))
 
 
 @asynccontextmanager
@@ -84,12 +96,78 @@ def bot_move(req: MoveRequest):
         if cfg["random"] and random.random() < cfg["random"]:
             move = random.choice(list(board.legal_moves))
         else:
-            limit = (chess.engine.Limit(time=cfg["movetime"]) if "movetime" in cfg
-                     else chess.engine.Limit(depth=cfg["depth"]))
-            move = _engine.play(board, limit).move
+            move = _engine.play(board, _limit_for(cfg)).move
         san = board.san(move)
 
     return {"move": move.uci(), "san": san}
+
+
+class AnalyzeRequest(BaseModel):
+    fen: str
+    bot: str
+
+
+def _score_from_white(pov_score: "chess.engine.PovScore") -> dict:
+    """Turn the engine's raw score into { cp, mate } from White's point of view.
+
+    The engine never emits a UCI "score mate", so a forced mate arrives as a centipawn value
+    close to MATE. We detect that and convert it back into a signed number of moves.
+    """
+    cp = pov_score.white().score()  # int centipawns, White's perspective (never None for us)
+    if cp is None:
+        return {"cp": None, "mate": None}
+    if cp >= MATE_THRESHOLD:
+        return {"cp": None, "mate": (MATE - cp + 1) // 2}       # White mates in N
+    if cp <= -MATE_THRESHOLD:
+        return {"cp": None, "mate": -((MATE + cp + 1) // 2)}    # White gets mated in N
+    return {"cp": cp, "mate": None}
+
+
+@app.post("/api/analyze")
+def analyze(req: AnalyzeRequest):
+    """Ask the chosen bot for the best move in a position, plus a short principal variation.
+
+    Because the engine exposes no MultiPV / PV output, we get the best move + score in one search
+    and then build the continuation by playing the engine against itself for a few more plies at a
+    light fixed depth (illustrative only — the headline move/eval uses the bot's real strength).
+    """
+    cfg = BOTS.get(req.bot)
+    if cfg is None:
+        raise HTTPException(status_code=400, detail=f"unknown bot '{req.bot}'")
+    try:
+        board = chess.Board(req.fen)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="invalid FEN")
+    if not board.is_valid():
+        raise HTTPException(status_code=400, detail="illegal position")
+    if board.is_game_over():
+        raise HTTPException(status_code=400, detail="position is already game over")
+
+    pv_limit = chess.engine.Limit(depth=min(cfg.get("depth", 8), 8))
+    with _lock:
+        result = _engine.play(board, _limit_for(cfg), info=chess.engine.INFO_SCORE)
+        best = result.move
+        score = _score_from_white(result.info["score"]) if result.info.get("score") else {"cp": None, "mate": None}
+
+        # Build the continuation line (SAN), best move first, then a few engine replies.
+        line = [board.san(best)]
+        walk = board.copy()
+        walk.push(best)
+        for _ in range(5):
+            if walk.is_game_over():
+                break
+            nxt = _engine.play(walk, pv_limit).move
+            if nxt is None:
+                break
+            line.append(walk.san(nxt))
+            walk.push(nxt)
+
+    return {
+        "fen": board.fen(),
+        "turn": "white" if board.turn == chess.WHITE else "black",
+        "best": {"move": best.uci(), "san": board.san(best), **score},
+        "line": line,
+    }
 
 
 # In production, serve the built frontend (web/dist) from the same server. In development the

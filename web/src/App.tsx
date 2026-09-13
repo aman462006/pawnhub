@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Analyze } from './components/Analyze'
 import { Game } from './components/Game'
 import { Header, type NavTarget, type View } from './components/Header'
 import { Home } from './components/Home'
@@ -21,7 +22,14 @@ export default function App() {
     setView('game')
   }
 
+  const [analyzeSeed, setAnalyzeSeed] = useState<string | null>(null)
+
   const goHome = () => setView('home')
+  const goAnalyze = (fen?: string) => {
+    setAnalyzeSeed(fen ?? null)
+    setView('analyze')
+    window.scrollTo({ top: 0 })
+  }
 
   const navigate = (target: NavTarget) => {
     const scroll = () =>
@@ -37,7 +45,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <Header view={view} onHome={goHome} onNavigate={navigate} />
+      <Header view={view} onHome={goHome} onNavigate={navigate} onAnalyze={() => goAnalyze()} />
 
       {view === 'game' && setup ? (
         <Game
@@ -45,7 +53,10 @@ export default function App() {
           botId={setup.bot}
           humanSide={setup.side}
           onExit={goHome}
+          onAnalyzePosition={goAnalyze}
         />
+      ) : view === 'analyze' ? (
+        <Analyze key={analyzeSeed ?? 'blank'} initialFen={analyzeSeed ?? undefined} />
       ) : (
         <Home onPlay={start} />
       )}

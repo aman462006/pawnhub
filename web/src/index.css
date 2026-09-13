@@ -240,10 +240,26 @@ h1, h2, h3, h4 { margin: 0; font-weight: 640; letter-spacing: -0.014em; line-hei
 }
 .move-row { display: grid; grid-template-columns: 30px 1fr 1fr; align-items: center; }
 .move-row .n { color: var(--text-3); }
-.ply { padding: 3px 7px; border-radius: 5px; color: var(--text); transition: background .12s; }
+.ply {
+  padding: 3px 7px; border-radius: 5px; color: var(--text); transition: background .12s;
+  font: inherit; text-align: left; background: none; border: none;
+}
+button.ply.filled { cursor: pointer; }
 .ply.filled:hover { background: var(--inset); }
 .ply.current { background: var(--accent); color: #fff; }
 .movelist-empty { margin-top: 10px; font-size: 13px; color: var(--text-3); }
+
+/* Review navigation — step through the game without touching its state. */
+.move-nav { margin-top: 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.nav-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 34px; border: 1px solid var(--line-2); border-radius: var(--r);
+  background: var(--bg); color: var(--text-2); transition: background .14s, color .14s, border-color .14s;
+}
+.nav-btn:hover:not(:disabled) { background: var(--inset); color: var(--text); }
+.nav-btn:active:not(:disabled) { transform: translateY(1px); }
+.nav-btn:disabled { opacity: .4; cursor: not-allowed; }
+.nav-btn svg { width: 18px; height: 18px; }
 
 .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
@@ -378,11 +394,70 @@ h1, h2, h3, h4 { margin: 0; font-weight: 640; letter-spacing: -0.014em; line-hei
 }
 
 /* ============================================================================
+   Analyse view
+   ============================================================================ */
+.analyze { padding: 8px 0 64px; }
+.analyze .section-head { margin: 34px 0 22px; }
+.analyze-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 30px;
+  align-items: start;
+}
+.board-placeholder {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  border: 1px dashed var(--line-2); border-radius: var(--r-lg);
+  color: var(--text-3); font-size: 14px; text-align: center; padding: 20px;
+  background: var(--panel);
+}
+
+/* Segmented FEN / PGN toggle */
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 3px; background: var(--inset); border-radius: var(--r); }
+.seg-btn {
+  height: 32px; border: none; background: transparent; border-radius: 4px;
+  font-size: 13px; font-weight: 560; color: var(--text-2); transition: background .14s, color .14s;
+}
+.seg-btn.on { background: var(--bg); color: var(--text); box-shadow: var(--shadow-sm); }
+
+.paste-box {
+  margin-top: 10px; width: 100%; resize: vertical;
+  padding: 10px 12px; border: 1px solid var(--line-2); border-radius: var(--r);
+  font-family: var(--font-mono); font-size: 12.5px; line-height: 1.5; color: var(--text);
+  background: var(--bg);
+}
+.paste-box:focus { outline: none; border-color: var(--accent); }
+.paste-err { margin-top: 10px; font-size: 13px; color: var(--danger); }
+
+/* Engine picker */
+.bot-pick { margin-top: 10px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.bot-pick-item {
+  display: flex; flex-direction: column; align-items: center; gap: 5px; text-align: center;
+  padding: 12px 8px; border: 1px solid var(--line); border-radius: var(--r); background: var(--bg);
+  transition: border-color .14s, background .14s;
+}
+.bot-pick-item:hover { border-color: var(--line-2); }
+.bot-pick-item.on { border-color: var(--accent); background: var(--accent-wash); }
+.bot-pick-item .bp-name { font-size: 13.5px; font-weight: 560; color: var(--text); }
+.bot-pick-item .bp-tier { font-size: 11.5px; color: var(--text-3); }
+
+/* Result */
+.result { margin-top: 16px; border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+.result-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; background: var(--accent-wash); }
+.result-top .best-san { font-size: 24px; font-weight: 640; color: var(--accent-ink); margin-top: 2px; }
+.eval-pill { text-align: right; }
+.eval-pill .val { font-size: 20px; font-weight: 640; color: var(--accent-ink); }
+.eval-pill.neg .val { color: var(--danger); }
+.eval-pill .sub { display: block; font-size: 11.5px; color: var(--text-3); }
+.result-line { padding: 14px 16px; }
+.result-line .line-text { margin-top: 6px; font-size: 13px; color: var(--text); line-height: 1.7; word-spacing: 2px; }
+
+/* ============================================================================
    Responsive
    ============================================================================ */
 @media (max-width: 900px) {
   .container { padding: 0 18px; }
   .game-grid { grid-template-columns: 1fr; gap: 20px; }
+  .analyze-grid { grid-template-columns: 1fr; gap: 20px; }
   .board-wrap, .board-players { max-width: 560px; }
   .panel { order: 2; }
   .bot-grid { grid-template-columns: repeat(2, 1fr); }

@@ -11,10 +11,12 @@ export function Game({
   botId,
   humanSide,
   onExit,
+  onAnalyzePosition,
 }: {
   botId: BotId
   humanSide: Side
   onExit: () => void
+  onAnalyzePosition: (fen: string) => void
 }) {
   const bot = botById(botId)
   const game = useChessGame(botId, humanSide)
@@ -27,7 +29,8 @@ export function Game({
   }, [game.status.over])
 
   const caps = analyzeCaptures(game.chess)
-  const interactive = !game.status.over && !game.thinking && game.status.turn === humanSide
+  const interactive =
+    !game.status.over && !game.thinking && game.status.turn === humanSide && !game.reviewing
   const canUndo = !game.thinking && game.historySan.length > 0
 
   // Which player sits at the visual top depends on board orientation.
@@ -60,10 +63,10 @@ export function Game({
             </div>
             <div className="board-wrap">
               <Board
-                fen={game.fen}
+                fen={game.boardFen}
                 orientation={orientation}
-                lastMove={game.lastMove}
-                checkSquare={game.status.checkSquare}
+                lastMove={game.boardLastMove}
+                checkSquare={game.boardCheckSquare}
                 interactive={interactive}
                 legalTargets={game.legalTargets}
                 onMove={game.userMove}
@@ -85,6 +88,15 @@ export function Game({
             onUndo={game.undo}
             onResign={game.resign}
             canUndo={canUndo}
+            activePly={game.activePly}
+            atStart={game.atStart}
+            atLive={game.atLive}
+            onGotoPly={game.gotoPly}
+            onFirst={game.goStart}
+            onPrev={game.goPrev}
+            onNext={game.goNext}
+            onLive={game.goLive}
+            onAnalyze={() => onAnalyzePosition(game.boardFen)}
           />
         </div>
       </section>

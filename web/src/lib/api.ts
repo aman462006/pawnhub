@@ -23,3 +23,36 @@ export async function getBotMove(fen: string, bot: BotId): Promise<BotMove> {
   }
   return res.json()
 }
+
+export interface BestMove {
+  move: string // UCI
+  san: string
+  cp: number | null // centipawns from White's point of view (null when it's a forced mate)
+  mate: number | null // signed mate-in-N from White's point of view (null when it's a cp eval)
+}
+
+export interface Analysis {
+  fen: string
+  turn: 'white' | 'black'
+  best: BestMove
+  line: string[] // principal variation in SAN, best move first
+}
+
+export async function analyzePosition(fen: string, bot: BotId): Promise<Analysis> {
+  const res = await fetch('/api/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fen, bot }),
+  })
+  if (!res.ok) {
+    // The backend sends a JSON { detail } on 400; fall back to plain text otherwise.
+    let detail = ''
+    try {
+      detail = (await res.json()).detail
+    } catch {
+      detail = await res.text().catch(() => '')
+    }
+    throw new Error(detail || `Analysis failed (${res.status})`)
+  }
+  return res.json()
+}
