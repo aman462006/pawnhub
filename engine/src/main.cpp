@@ -6,6 +6,7 @@
 // the real correctness gate; for now these checks catch mistakes immediately.
 #include <cstdio>
 #include <string>
+#include <vector>
 #include <chrono>
 #include <fstream>
 #include <cstdlib>

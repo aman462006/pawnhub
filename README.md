@@ -1,5 +1,7 @@
 # PawnHub — a chess engine built from scratch
 
+[![CI](https://github.com/aman462006/pawnhub/actions/workflows/ci.yml/badge.svg)](https://github.com/aman462006/pawnhub/actions/workflows/ci.yml)
+
 **▶ Play it live: [pawnhub.onrender.com](https://pawnhub.onrender.com)**
 _(hosted on Render's free tier — it sleeps when idle, so the first load after a while can take a few
 seconds to wake up)_
@@ -223,7 +225,10 @@ nets/                   trained network (nnue.bin) + torch checkpoint + referenc
 server/app.py           FastAPI backend wrapping the UCI engine
 web/                    React + TypeScript frontend (Vite)
 lichess-bot/            lichess-bot bridge + config to run the engine on Lichess
-src/, tests/            small Python demo engines + tests
+src/, tests/            the Phase 0-2 Python demo engines (random, alpha-beta, advanced
+                          "Bishop") + their pytest/unittest suite; the demo engines are the
+                          reference the C++ engine was measured against (see tools/match_*.py)
+                          and the test suite is what CI runs — they are used, not dead code
 ```
 
 ---
@@ -239,6 +244,23 @@ src/, tests/            small Python demo engines + tests
 
 `engine.exe` is a standalone UCI engine. `UseNNUE` (default `true`) switches between the NNUE and
 the PeSTO evaluation.
+
+### Build the engine (Linux / macOS, `make`, C++20)
+
+```bash
+make -C engine                      # -> engine/build/engine
+./engine/build/engine --selftest     # perft + tactics + SEE + NNUE checks
+```
+
+The Makefile builds portably (no `-march` flag, no `-static`), so it works on any CPU including
+Apple Silicon. To reproduce the exact Dockerfile build: `make -C engine EXTRA_FLAGS="-march=x86-64-v2 -static"`.
+
+### Continuous integration
+
+Every push and PR runs `.github/workflows/ci.yml`: the engine is built on `ubuntu-latest` with the
+Dockerfile flags, `--selftest` runs the correctness gate (perft, tactics, SEE, NNUE consistency
+vs the Python export) and fails the build if any check fails, then the Python test suite in
+`tests/` runs against the demo engines in `src/`.
 
 ### Run the web app
 
